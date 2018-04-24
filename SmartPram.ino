@@ -6,10 +6,13 @@
  * Created 22 April 2018
  * 
  */
+
+// Improvement add some extra booleans to determine if its been retracted
+ 
 //----------- Defines -----------//
 #define PRESSURETHRESHOLD 0
-#define HANDSOFFTIME 3
-#define BRAKETIME 10
+#define HANDSOFFTIME 3000
+#define BRAKETIME 2
 
 #define relayPin 2
 #define pressurePin A0
@@ -33,7 +36,9 @@ void PinSetup(void) {
 }
 
 bool HandsOn(void) {
-  return(analogRead(pressurePin) >= PRESSURETHRESHOLD);
+  int pressure = analogRead(pressurePin);
+//  Serial.println(pressure);
+  return(pressure > PRESSURETHRESHOLD);
 }
 
 void ActuateBrake(void) {
@@ -51,6 +56,8 @@ void InitPram(void) {
 //-------------------------------//
 //------------ Setup ------------//
 void setup() {
+  Serial.begin(115200);
+  while(!Serial);
   PinSetup();
   InitPram();
   state = 0;
