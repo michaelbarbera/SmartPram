@@ -7,12 +7,14 @@
  * 
  */ 
 //----------- Defines -----------//
-#define PRESSURETHRESHOLD 0
+
+#define DEBUG 1
+
+#define PRESSURETHRESHOLD 10
 #define SEATTHRESHOLD 0
 #define BUZZFREQUENCY 2000
 #define HANDSOFFTIME 3000
 #define BRAKETIME 2000
-#define RELEASETIME 1000
 #define SEATTIME 4000
 
 #define relayPinDirection 2
@@ -29,7 +31,7 @@
 
 bool handOff_detected = false;
 // Improvement add some extra booleans to determine if its been retracted
-bool hasRetracted = false;
+bool hasActuated = false;
 
 bool massOnSeat = false;
 
@@ -59,22 +61,34 @@ bool HandsOn(void) {
 
 void ControlBrakePower(bool On) {
   if(On) {
+    if(DEBUG) {
+      Serial.println("Brake Powered ON");
+    }
     digitalWrite(relayPinPower, HIGH);
   } else {
+    if(DEBUG) {
+      Serial.println("Brake Powered OFF");
+    }
     digitalWrite(relayPinPower, LOW);
   }
 }
 
 void ActuateBrake(void) {
+  if(DEBUG) {
+    Serial.println("Brake Acuated");
+  }
   digitalWrite(relayPinDirection, HIGH);
 }
 
 void ReleaseBrake(void) {
+  if(DEBUG) {
+    Serial.println("Brake Released");
+  }
   digitalWrite(relayPinDirection, LOW);
 }
 
 void InitPram(void) {
-  ReleaseBrake();
+  //ReleaseBrake();
 }
 
 void BrakeControl(void) {
@@ -86,6 +100,9 @@ void BrakeControl(void) {
           handOff_detected = false;
         } else {
           if(millis() - handsOffTime >= HANDSOFFTIME) {
+            if(DEBUG) {
+              Serial.println("Activating Brake.");
+            }
             state = activateBrake;
             ControlBrakePower(true);
             ActuateBrake();
@@ -94,22 +111,34 @@ void BrakeControl(void) {
         }
       } else {
         if(!HandsOn()) {
-          handOff_detected = true;
-          handsOffTime = millis();
-        }   
+          if(!hasActuated) {
+            handOff_detected = true;
+            handsOffTime = millis();
+          }
+        } else {
+          hasActuated = false;
+        }
       }
       break;
     case activateBrake:
       if(millis() - brakeStarted >= BRAKETIME || HandsOn()) {
+        if(DEBUG) {
+          Serial.println("Begin Retracting Brake.");
+        }
         state = releaseBrake;
         ReleaseBrake();
         brakeReleaseTime = millis();
       } 
       break;
     case releaseBrake:
-      if(millis() - brakeReleaseTime >= RELEASETIME) {
+      if(millis() - brakeReleaseTime >= BRAKETIME) {
+        if(DEBUG) {
+          Serial.println("Brake Released.");
+        }
         ControlBrakePower(false);
         state = checkHands;
+        hasActuated = true;
+        handOff_detected = false;
       }
       break;
     default:
@@ -159,7 +188,7 @@ void setup() {
 //------------ Loop -------------//
 void loop() { 
   BrakeControl();
-  CheckSeat();
+//  CheckSeat();
 }
 //-------------------------------//
 
