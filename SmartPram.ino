@@ -9,12 +9,13 @@
 //----------- Defines -----------//
 
 #define DEBUG 1
+#define HANDPRINT 1
 
-#define PRESSURETHRESHOLD 10
+#define PRESSURETHRESHOLD 30
 #define SEATTHRESHOLD 0
 #define BUZZFREQUENCY 2000
 #define HANDSOFFTIME 3000
-#define BRAKETIME 2000
+#define BRAKETIME 10000
 #define SEATTIME 4000
 
 #define relayPinDirection 2
@@ -55,7 +56,9 @@ void PinSetup(void) {
 
 bool HandsOn(void) {
   int pressure = analogRead(pressurePin);
-//  Serial.println(pressure);
+  if(HANDPRINT && DEBUG && (pressure > PRESSURETHRESHOLD)) {
+    Serial.println(pressure);
+  }
   return(pressure > PRESSURETHRESHOLD);
 }
 
