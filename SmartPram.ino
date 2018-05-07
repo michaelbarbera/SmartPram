@@ -39,6 +39,7 @@ bool massOnSeat = false;
 unsigned long handsOffTime;
 unsigned long brakeStarted;
 unsigned long brakeReleaseTime;
+unsigned long brakeReleasedTime;
 unsigned long seatTime;
 
 byte state = 0;
@@ -124,7 +125,13 @@ void BrakeControl(void) {
       }
       break;
     case activateBrake:
-      if(millis() - brakeStarted >= BRAKETIME || HandsOn()) {
+      bool handsTouched = HandsOn();
+      if(millis() - brakeStarted >= BRAKETIME || handsTouched) {
+        if(handsTouched) {
+          brakeReleasedTime = millis() - brakeStarted;
+        } else {
+          brakeReleasedTime = BRAKETIME;
+        }
         if(DEBUG) {
           Serial.println("Begin Retracting Brake.");
         }
@@ -134,7 +141,7 @@ void BrakeControl(void) {
       } 
       break;
     case releaseBrake:
-      if(millis() - brakeReleaseTime >= BRAKETIME) {
+      if(millis() - brakeReleaseTime >= brakeReleasedTime) {
         if(DEBUG) {
           Serial.println("Brake Released.");
         }
