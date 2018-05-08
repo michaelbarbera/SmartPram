@@ -11,11 +11,11 @@
 #define DEBUG 1
 #define HANDPRINT 1
 
-#define PRESSURETHRESHOLD 30
+#define PRESSURETHRESHOLD 100
 #define SEATTHRESHOLD 0
 #define BUZZFREQUENCY 2000
 #define HANDSOFFTIME 3000
-#define BRAKETIME 10000
+#define BRAKETIME 5000
 #define SEATTIME 4000
 
 #define relayPinDirection 2
@@ -96,11 +96,12 @@ void InitPram(void) {
 }
 
 void BrakeControl(void) {
-  digitalWrite(handLED, HandsOn()); // maybe make this a bit smarter
+  bool handsTouched = HandsOn();
+  digitalWrite(handLED, handsTouched); // maybe make this a bit smarter
   switch(state) {
     case checkHands:
       if(handOff_detected) {
-        if(HandsOn()) {
+        if(handsTouched) {
           handOff_detected = false;
         } else {
           if(millis() - handsOffTime >= HANDSOFFTIME) {
@@ -114,7 +115,7 @@ void BrakeControl(void) {
           }
         }
       } else {
-        if(!HandsOn()) {
+        if(!handsTouched) {
           if(!hasActuated) {
             handOff_detected = true;
             handsOffTime = millis();
@@ -125,7 +126,6 @@ void BrakeControl(void) {
       }
       break;
     case activateBrake:
-      bool handsTouched = HandsOn();
       if(millis() - brakeStarted >= BRAKETIME || handsTouched) {
         if(handsTouched) {
           brakeReleasedTime = millis() - brakeStarted;
