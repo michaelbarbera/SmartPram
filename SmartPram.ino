@@ -20,11 +20,12 @@
 
 #define relayPinDirection 2
 #define relayPinPower 3
-#define handLED 4
+#define handLED 5
 #define pressurePin A0
 #define seatPin A1
-#define seatLED 5
-#define seatBuzzer 6
+#define bucklePin 4
+#define seatLED 6
+#define seatBuzzer 7
 // For Brake
 #define checkHands 0
 #define activateBrake 1
@@ -49,6 +50,7 @@ void PinSetup(void) {
   pinMode(relayPinPower, OUTPUT);
   pinMode(relayPinDirection, OUTPUT);
   pinMode(pressurePin, INPUT);
+  pinMode(bucklePin, INPUT);
   pinMode(seatPin, INPUT);
   pinMode(seatLED, OUTPUT);
   pinMode(handLED, OUTPUT);
@@ -160,6 +162,10 @@ bool OnSeat(void) {
   return(analogRead(pressurePin) > SEATTHRESHOLD);  
 }
 
+bool buckleOn(void) {
+  return(digitalRead(bucklePin));  
+}
+
 void ControlBuzzer(bool On) {
   if(On) {
     tone(seatBuzzer, BUZZFREQUENCY);
@@ -170,6 +176,7 @@ void ControlBuzzer(bool On) {
 
 void CheckSeat(void) {
   bool currentState = OnSeat();
+  bool buckleState = buckleOn();
   if(massOnSeat!=currentState) {
     if(currentState) {
       seatTime = millis();
@@ -180,7 +187,7 @@ void CheckSeat(void) {
     }
     massOnSeat = currentState;
   }
-  if(massOnSeat && (millis() - seatTime >= SEATTIME)) {
+  if(buckleState && massOnSeat && (millis() - seatTime >= SEATTIME)) {
     ControlBuzzer(true);
   }
 }
