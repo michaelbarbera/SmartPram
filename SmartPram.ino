@@ -5,6 +5,8 @@
  * 
  * Created 22 April 2018
  * 
+ * TODO: Create initialisation function for position of the actuator.
+ * 
  */ 
 //----------- Defines -----------//
 
@@ -32,7 +34,6 @@
 #define releaseBrake 2
 
 bool handOff_detected = false;
-// Improvement add some extra booleans to determine if its been retracted
 bool hasActuated = false;
 
 bool massOnSeat = false;
@@ -162,7 +163,7 @@ bool OnSeat(void) {
   return(analogRead(pressurePin) > SEATTHRESHOLD);  
 }
 
-bool buckleOn(void) {
+bool BuckleOn(void) {
   return(digitalRead(bucklePin));  
 }
 
@@ -176,7 +177,7 @@ void ControlBuzzer(bool On) {
 
 void CheckSeat(void) {
   bool currentState = OnSeat();
-  bool buckleState = buckleOn();
+  bool buckleState = BuckleOn();
   if(massOnSeat!=currentState) {
     if(currentState) {
       seatTime = millis();
@@ -187,7 +188,7 @@ void CheckSeat(void) {
     }
     massOnSeat = currentState;
   }
-  if(buckleState && massOnSeat && (millis() - seatTime >= SEATTIME)) {
+  if(!buckleState && massOnSeat && (millis() - seatTime >= SEATTIME)) {
     ControlBuzzer(true);
   }
 }
