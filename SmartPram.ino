@@ -5,28 +5,42 @@
  * 
  * Created 22 April 2018
  * 
- * TODO: Create initialisation function for position of the actuator.
- * 
  */ 
+
+//---------- Libraries ----------//
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+  #include <avr/power.h>
+#endif
+
 //----------- Defines -----------//
 
 #define DEBUG 1
-#define HANDPRINT 1
+#define HANDPRINT 0
+#define SEATPRINT 1
+
+#define NUMPIXELS 4 // two lots of these
+#define NUMINDICATORS 2
+
+#define BRIGHTNESS 10
 
 #define PRESSURETHRESHOLD 100
-#define SEATTHRESHOLD 0
+#define SEATTHRESHOLD 100
 #define BUZZFREQUENCY 2000
 #define HANDSOFFTIME 3000
 #define BRAKETIME 5000
+#define INITUPTIME 5000        //test
+#define INITDOWNTIME 2000      //test
 #define SEATTIME 4000
 
 #define relayPinDirection 2
 #define relayPinPower 3
-#define handLED 5
+#define pinLED 9
+#define handleIndicator 0
+#define seatIndicator 1
 #define pressurePin A0
 #define seatPin A1
-#define bucklePin 4
-#define seatLED 6
+#define bucklePin 5
 #define seatBuzzer 7
 // For Brake
 #define checkHands 0
@@ -37,6 +51,7 @@ bool handOff_detected = false;
 bool hasActuated = false;
 
 bool massOnSeat = false;
+bool buckleState = false;
 
 unsigned long handsOffTime;
 unsigned long brakeStarted;
@@ -45,6 +60,9 @@ unsigned long brakeReleasedTime;
 unsigned long seatTime;
 
 byte state = 0;
+
+Adafruit_NeoPixel pixels;
+
 //-------------------------------//
 //------- Helper Functions ------//
 void PinSetup(void) {
@@ -53,9 +71,43 @@ void PinSetup(void) {
   pinMode(pressurePin, INPUT);
   pinMode(bucklePin, INPUT);
   pinMode(seatPin, INPUT);
-  pinMode(seatLED, OUTPUT);
-  pinMode(handLED, OUTPUT);
   pinMode(seatBuzzer, OUTPUT);
+}
+
+void InitLEDs(void) {
+  pixels = Adafruit_NeoPixel(NUMPIXELS*NUMINDICATORS, pinLED, NEO_GRB + NEO_KHZ800);
+  pixels.setBrightness(BRIGHTNESS);
+  pixels.begin();
+  pixels.show();
+}
+
+void OkIndicator(byte indicator) {
+  for(byte i=NUMPIXELS*indicator; i<NUMPIXELS*(indicator+1); i++) {
+    pixels.setPixelColor(i, pixels.Color(0,255,0)); // yellow
+  }
+  pixels.show();
+}
+
+void AlertIndicator(byte indicator) {
+  for(byte i=NUMPIXELS*indicator; i<NUMPIXELS*(indicator+1); i++) {
+    pixels.setPixelColor(i, pixels.Color(255,0,0)); // yellow
+  }
+  pixels.show();
+}
+
+void WarningIndicator(byte indicator) {
+  for(byte i=NUMPIXELS*indicator; i<NUMPIXELS*(indicator+1); i++) {
+    pixels.setPixelColor(i, pixels.Color(255,255,0)); // yellow
+  }
+  pixels.show();
+}
+
+void InitActuatorPosition(void) {
+  ControlBrakePower(true);
+  ReleaseBrake();
+  delay(INITUPTIME);
+  ActuateBrake();
+  delay(INITDOWNTIME);
 }
 
 bool HandsOn(void) {
@@ -100,12 +152,13 @@ void InitPram(void) {
 
 void BrakeControl(void) {
   bool handsTouched = HandsOn();
-  digitalWrite(handLED, handsTouched); // maybe make this a bit smarter
+  //digitalWrite(handLED, handsTouched); // maybe make this a bit smarter
   switch(state) {
     case checkHands:
       if(handOff_detected) {
         if(handsTouched) {
           handOff_detected = false;
+          OkIndicator(handleIndicator);
         } else {
           if(millis() - handsOffTime >= HANDSOFFTIME) {
             if(DEBUG) {
@@ -115,6 +168,7 @@ void BrakeControl(void) {
             ControlBrakePower(true);
             ActuateBrake();
             brakeStarted = millis();
+            AlertIndicator(handleIndicator);
           }
         }
       } else {
@@ -122,8 +176,10 @@ void BrakeControl(void) {
           if(!hasActuated) {
             handOff_detected = true;
             handsOffTime = millis();
+            WarningIndicator(handleIndicator);
           }
         } else {
+          OkIndicator(handleIndicator);
           hasActuated = false;
         }
       }
@@ -160,11 +216,21 @@ void BrakeControl(void) {
 }
 
 bool OnSeat(void) {
-  return(analogRead(pressurePin) > SEATTHRESHOLD);  
+  bool seat_status = analogRead(seatPin) > SEATTHRESHOLD;
+  if(DEBUG && SEATPRINT) {
+    Serial.print("Seat Status: ");
+    Serial.println(seat_status);
+  }
+  return(seat_status);  
 }
 
 bool BuckleOn(void) {
-  return(digitalRead(bucklePin));  
+  bool buckle_status = digitalRead(bucklePin);
+  if(DEBUG && SEATPRINT) {
+    Serial.print("Buckle Status: ");
+    Serial.println(buckle_status);
+  }
+  return(buckle_status);  
 }
 
 void ControlBuzzer(bool On) {
@@ -177,19 +243,34 @@ void ControlBuzzer(bool On) {
 
 void CheckSeat(void) {
   bool currentState = OnSeat();
-  bool buckleState = BuckleOn();
-  if(massOnSeat!=currentState) {
-    if(currentState) {
+  bool currentBuckleState = BuckleOn();
+  if(buckleState!=currentBuckleState) {
+    if(!currentBuckleState && currentState) {
       seatTime = millis();
-      digitalWrite(seatLED, HIGH);
+      AlertIndicator(seatIndicator);
     } else {
-      digitalWrite(seatLED, LOW);
+      OkIndicator(seatIndicator);
       ControlBuzzer(false);
+    }
+    buckleState = currentBuckleState;
+  }
+  if(massOnSeat!=currentState) {
+    if(!currentState && currentBuckleState) {
+      WarningIndicator(seatIndicator);
+    }
+    if(currentState && currentBuckleState) {
+      OkIndicator(seatIndicator);
+      ControlBuzzer(false);    
+    }
+    if(!currentState && !currentBuckleState) {
+      OkIndicator(seatIndicator);
+      ControlBuzzer(false);    
     }
     massOnSeat = currentState;
   }
   if(!buckleState && massOnSeat && (millis() - seatTime >= SEATTIME)) {
     ControlBuzzer(true);
+    AlertIndicator(seatIndicator);
   }
 }
 
@@ -200,13 +281,15 @@ void setup() {
   while(!Serial);
   PinSetup();
   InitPram();
+  InitActuatorPosition();
+  InitLEDs();
   state = 0;
 }
 //-------------------------------//
 //------------ Loop -------------//
 void loop() { 
   BrakeControl();
-//  CheckSeat();
+  CheckSeat();
 }
 //-------------------------------//
 
