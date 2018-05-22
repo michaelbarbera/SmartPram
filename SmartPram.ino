@@ -78,6 +78,9 @@ void InitLEDs(void) {
   pixels = Adafruit_NeoPixel(NUMPIXELS*NUMINDICATORS, pinLED, NEO_GRB + NEO_KHZ800);
   pixels.setBrightness(BRIGHTNESS);
   pixels.begin();
+  for(byte i=0; i<NUMPIXELS*NUMINDICATORS; i++) {
+    pixels.setPixelColor(i, pixels.Color(0,0,0)); // black
+  }
   pixels.show();
 }
 
@@ -145,10 +148,6 @@ void ReleaseBrake(void) {
     Serial.println("Brake Released");
   }
   digitalWrite(relayPinDirection, LOW);
-}
-
-void InitPram(void) {
-  //ReleaseBrake();
 }
 
 void BrakeControl(void) {
@@ -281,9 +280,8 @@ void setup() {
   Serial.begin(115200);
   while(!Serial);
   PinSetup();
-  InitPram();
-  InitActuatorPosition();
   InitLEDs();
+  InitActuatorPosition();
   state = 0;
 }
 //-------------------------------//
