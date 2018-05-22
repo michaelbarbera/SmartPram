@@ -17,12 +17,12 @@
 
 #define DEBUG 1
 #define HANDPRINT 0
-#define SEATPRINT 1
+#define SEATPRINT 0
 
 #define NUMPIXELS 4 // two lots of these
 #define NUMINDICATORS 2
 
-#define BRIGHTNESS 10
+#define BRIGHTNESS 100
 
 #define PRESSURETHRESHOLD 100
 #define SEATTHRESHOLD 100
@@ -30,7 +30,7 @@
 #define HANDSOFFTIME 3000
 #define BRAKETIME 5000
 #define INITUPTIME 5000        //test
-#define INITDOWNTIME 2000      //test
+#define INITDOWNTIME 5000      //test
 #define SEATTIME 4000
 
 #define relayPinDirection 2
@@ -104,10 +104,11 @@ void WarningIndicator(byte indicator) {
 
 void InitActuatorPosition(void) {
   ControlBrakePower(true);
-  ReleaseBrake();
-  delay(INITUPTIME);
   ActuateBrake();
+  delay(INITUPTIME);
+  ReleaseBrake();
   delay(INITDOWNTIME);
+  ControlBrakePower(false);
 }
 
 bool HandsOn(void) {
