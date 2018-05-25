@@ -1,5 +1,5 @@
 #define BUZZFREQUENCY 800
-const int seatBuzzer = 12; //buzzer to arduino pin 9
+const int seatBuzzer = 7; //buzzer to arduino pin 9
 
 void setup() {
   // put your setup code here, to run once:

@@ -15,43 +15,49 @@
 
 //----------- Defines -----------//
 
-#define DEBUG 1
+#define DEBUG 0
 #define HANDPRINT 0
 #define SEATPRINT 0
 
-#define NUMPIXELS 4 // two lots of these
+#define NUMPIXELS 6 // two lots of these
 #define NUMINDICATORS 2
 
 #define BRIGHTNESS 100
 
-#define PRESSURETHRESHOLD 100
+#define PRESSURETHRESHOLD 200
 #define SEATTHRESHOLD 100
-#define BUZZFREQUENCY 2000
+#define BUZZFREQUENCY 800
 #define HANDSOFFTIME 3000
-#define BRAKETIME 5000
-#define INITUPTIME 5000        //test
-#define INITDOWNTIME 5000      //test
-#define SEATTIME 4000
+#define BRAKETIME 3000
+#define INITUPTIME 3000        //test
+#define INITDOWNTIME 3000      //test
+#define SEATTIME 2000
 
-#define relayPinDirection 2
-#define relayPinPower 3
-#define pinLED 9
+#define relayPinDirection 3 //2
+#define relayPinPower 5 //3
+#define pinLED 4 //9
+
 #define handleIndicator 0
 #define seatIndicator 1
+
 #define pressurePin A0
 #define seatPin A1
-#define bucklePin 5
-#define seatBuzzer 7
+#define bucklePin 8 //5
+#define seatBuzzer 12 //7
 // For Brake
 #define checkHands 0
 #define activateBrake 1
 #define releaseBrake 2
+
+bool justStarted = true;
 
 bool handOff_detected = false;
 bool hasActuated = false;
 
 bool massOnSeat = false;
 bool buckleState = false;
+
+bool buzzerOn = false;
 
 unsigned long handsOffTime;
 unsigned long brakeStarted;
@@ -79,7 +85,7 @@ void InitLEDs(void) {
   pixels.setBrightness(BRIGHTNESS);
   pixels.begin();
   for(byte i=0; i<NUMPIXELS*NUMINDICATORS; i++) {
-    pixels.setPixelColor(i, pixels.Color(0,0,0)); // black
+    pixels.setPixelColor(i, pixels.Color(255,0,0)); // black
   }
   pixels.show();
 }
@@ -107,16 +113,14 @@ void WarningIndicator(byte indicator) {
 
 void InitActuatorPosition(void) {
   ControlBrakePower(true);
-  ActuateBrake();
-  delay(INITUPTIME);
   ReleaseBrake();
-  delay(INITDOWNTIME);
+  delay(INITUPTIME);
   ControlBrakePower(false);
 }
 
 bool HandsOn(void) {
   int pressure = analogRead(pressurePin);
-  if(HANDPRINT && DEBUG && (pressure > PRESSURETHRESHOLD)) {
+  if(HANDPRINT && DEBUG) {
     Serial.println(pressure);
   }
   return(pressure > PRESSURETHRESHOLD);
@@ -186,11 +190,6 @@ void BrakeControl(void) {
       break;
     case activateBrake:
       if(millis() - brakeStarted >= BRAKETIME || handsTouched) {
-        if(handsTouched) {
-          brakeReleasedTime = millis() - brakeStarted;
-        } else {
-          brakeReleasedTime = BRAKETIME;
-        }
         if(DEBUG) {
           Serial.println("Begin Retracting Brake.");
         }
@@ -200,7 +199,7 @@ void BrakeControl(void) {
       } 
       break;
     case releaseBrake:
-      if(millis() - brakeReleaseTime >= brakeReleasedTime) {
+      if(millis() - brakeReleaseTime >= BRAKETIME) {
         if(DEBUG) {
           Serial.println("Brake Released.");
         }
@@ -234,6 +233,7 @@ bool BuckleOn(void) {
 }
 
 void ControlBuzzer(bool On) {
+  buzzerOn = On;
   if(On) {
     tone(seatBuzzer, BUZZFREQUENCY);
   } else {
@@ -244,6 +244,11 @@ void ControlBuzzer(bool On) {
 void CheckSeat(void) {
   bool currentState = OnSeat();
   bool currentBuckleState = BuckleOn();
+  if(justStarted) {
+    massOnSeat = !currentState;
+    buckleState = !currentBuckleState;
+    justStarted = false;
+  }
   if(buckleState!=currentBuckleState) {
     if(!currentBuckleState && currentState) {
       seatTime = millis();
@@ -266,11 +271,18 @@ void CheckSeat(void) {
       OkIndicator(seatIndicator);
       ControlBuzzer(false);    
     }
+    if(currentState && !currentBuckleState) {
+      AlertIndicator(seatIndicator);
+      seatTime = millis();
+    }    
     massOnSeat = currentState;
   }
-  if(!buckleState && massOnSeat && (millis() - seatTime >= SEATTIME)) {
+  if(!buzzerOn && !buckleState && massOnSeat && (millis() - seatTime >= SEATTIME)) {
     ControlBuzzer(true);
     AlertIndicator(seatIndicator);
+    if (DEBUG) {
+      Serial.println("Buzzer On");
+    }
   }
 }
 
