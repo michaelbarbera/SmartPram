@@ -23,14 +23,18 @@
 #define NUMINDICATORS 2
 
 #define BRIGHTNESS 100
+#define PIXELTRANSITION 100
+#define FREQ1 262
+#define FREQ2 294
+#define FREQ3 349
 
 #define PRESSURETHRESHOLD 200
 #define SEATTHRESHOLD 100
 #define BUZZFREQUENCY 800
 #define HANDSOFFTIME 3000
 #define BRAKETIME 3000
-#define INITUPTIME 3000        //test
-#define INITDOWNTIME 3000      //test
+#define INITUPTIME 3000        
+#define INITDOWNTIME 3000      
 #define SEATTIME 2000
 
 #define relayPinDirection 3 //2
@@ -81,25 +85,55 @@ void PinSetup(void) {
 }
 
 void InitLEDs(void) {
+  bool buzzed = false;
   pixels = Adafruit_NeoPixel(NUMPIXELS*NUMINDICATORS, pinLED, NEO_GRB + NEO_KHZ800);
   pixels.setBrightness(BRIGHTNESS);
   pixels.begin();
-  for(byte i=0; i<NUMPIXELS*NUMINDICATORS; i++) {
-    pixels.setPixelColor(i, pixels.Color(255,0,0)); // black
+  for(byte i=0; i < NUMPIXELS*NUMINDICATORS; i++) {
+    if(i < NUMPIXELS*NUMINDICATORS*1/3) {
+      pixels.setPixelColor(i, pixels.Color(255,0,0)); // blue
+      if(!buzzed) {
+        tone(seatBuzzer, FREQ1);
+        buzzed = true;
+      }
+      if(i == NUMPIXELS*NUMINDICATORS*1/3-1) {
+        buzzed = false;
+      }
+    } else if(i < NUMPIXELS*NUMINDICATORS*2/3) {
+      pixels.setPixelColor(i, pixels.Color(255,255,0)); // blue
+      if(!buzzed) {
+        tone(seatBuzzer, FREQ2);
+        buzzed = true;
+      }
+      if(i == NUMPIXELS*NUMINDICATORS*2/3-1) {
+        buzzed = false;
+      }
+    } else if(i < NUMPIXELS*NUMINDICATORS) {
+      pixels.setPixelColor(i, pixels.Color(0,255,0)); // blue
+      if(!buzzed) {
+        tone(seatBuzzer, FREQ3);
+        buzzed = true;
+      }
+      if(i == NUMPIXELS*NUMINDICATORS-1) {
+        buzzed = false;
+      }
+    }
+    pixels.show();
+    delay(PIXELTRANSITION);
   }
-  pixels.show();
+  noTone(seatBuzzer);
 }
 
 void OkIndicator(byte indicator) {
   for(byte i=NUMPIXELS*indicator; i<NUMPIXELS*(indicator+1); i++) {
-    pixels.setPixelColor(i, pixels.Color(0,255,0)); // yellow
+    pixels.setPixelColor(i, pixels.Color(0,255,0)); // green
   }
   pixels.show();
 }
 
 void AlertIndicator(byte indicator) {
   for(byte i=NUMPIXELS*indicator; i<NUMPIXELS*(indicator+1); i++) {
-    pixels.setPixelColor(i, pixels.Color(255,0,0)); // yellow
+    pixels.setPixelColor(i, pixels.Color(255,0,0)); // red
   }
   pixels.show();
 }
