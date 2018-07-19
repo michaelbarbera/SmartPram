@@ -1,9 +1,13 @@
 /*
  * Smart Pram
  * 
- * Activates brakes when no hands are detected.
+ * Seat and Buckle Monitoring:
+ *  Alerts user of buckle and seat presence states.
  * 
- * Created 22 April 2018
+ * Hand Presence and Auto-Braking:
+ *  Activates brakes when no hands are detected.
+ * 
+ * Created: 22 April 2018
  * 
  */ 
 
@@ -24,9 +28,9 @@
 
 #define BRIGHTNESS 100
 #define PIXELTRANSITION 100
-#define FREQ1 262
-#define FREQ2 294
-#define FREQ3 349
+#define FREQ1 262 // C4
+#define FREQ2 294 // D4
+#define FREQ3 349 // E#4
 
 #define PRESSURETHRESHOLD 200
 #define SEATTHRESHOLD 100
@@ -66,7 +70,6 @@ bool buzzerOn = false;
 unsigned long handsOffTime;
 unsigned long brakeStarted;
 unsigned long brakeReleaseTime;
-unsigned long brakeReleasedTime;
 unsigned long seatTime;
 
 byte state = 0;
@@ -190,7 +193,6 @@ void ReleaseBrake(void) {
 
 void BrakeControl(void) {
   bool handsTouched = HandsOn();
-  //digitalWrite(handLED, handsTouched); // maybe make this a bit smarter
   switch(state) {
     case checkHands:
       if(handOff_detected) {
